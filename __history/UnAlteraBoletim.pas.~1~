@@ -1,0 +1,427 @@
+unit UnAlteraBoletim;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs,UnDm, DBCtrls, StdCtrls, Buttons, DB, IBCustomDataSet, IBQuery,
+  ExtCtrls, Grids, DBGrids;
+
+type
+  TFrmAlteraBoletim = class(TForm)
+    Panel1: TPanel;
+    Label4: TLabel;
+    ComboBox1: TComboBox;
+    Edit1: TEdit;
+    DataSource1: TDataSource;
+    IBQuery_AlteraBoletim: TIBQuery;
+    BitBtn2: TBitBtn;
+    BitBtn1: TBitBtn;
+    Bevel1: TBevel;
+    DBGrid_InseriAluno: TDBGrid;
+    DBText1: TDBText;
+    DBText2: TDBText;
+    DBText3: TDBText;
+    DBText4: TDBText;
+    Label1: TLabel;
+    CBox_Serie: TComboBox;
+    CBox_Turma: TComboBox;
+    Label2: TLabel;
+    CBox_Turno: TComboBox;
+    Label3: TLabel;
+    procedure BitBtn1Click(Sender: TObject);
+    procedure Edit1Change(Sender: TObject);
+    procedure BitBtn2Click(Sender: TObject);
+    procedure DataSource1StateChange(Sender: TObject);
+    procedure ComboBox1Change(Sender: TObject);
+    procedure ComboBox1KeyPress(Sender: TObject; var Key: Char);
+    procedure ComboBox1Enter(Sender: TObject);
+    procedure DBGrid_InseriAlunoKeyPress(Sender: TObject; var Key: Char);
+    procedure Edit1KeyUp(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure Edit1KeyPress(Sender: TObject; var Key: Char);
+    procedure FormShow(Sender: TObject);
+    procedure CBox_TurnoKeyPress(Sender: TObject; var Key: Char);
+    procedure FormCreate(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
+    procedure CBox_SerieKeyPress(Sender: TObject; var Key: Char);
+    procedure CBox_TurmaKeyPress(Sender: TObject; var Key: Char);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  FrmAlteraBoletim: TFrmAlteraBoletim;
+
+implementation
+
+uses UnPrincipal, UnBoletim, UnLocalizar;
+
+{$R *.dfm}
+
+procedure TFrmAlteraBoletim.BitBtn1Click(Sender: TObject);
+begin
+if (Dm.DS_BOLETIM.State = dsEdit) or (Dm.DS_BOLETIM.State = dsInsert) then
+begin
+Dm.IBDS_BOLETIM.Cancel;
+Dm.IBDS_BOLETIM.CancelUpdates;
+Dm.IBTransaction.RollbackRetaining;
+// CANCELA ALTERAÇÕES
+FrmBoletim.IBDS_ExibeNotas.Cancel;
+FrmBoletim.IBDS_ExibeNotas.CancelUpdates;
+Dm.IBTransaction.RollbackRetaining;
+end else
+Close;
+end;
+
+procedure TFrmAlteraBoletim.Edit1Change(Sender: TObject);
+var a,b,c: String;
+begin
+Screen.Cursor := crHourglass;
+if ComboBox1.Text = '' then
+begin
+ComboBox1.Text:='ALUNO(A)';
+Label1.Caption:= 'Informe o(a) '+ComboBox1.Text;
+end
+else
+FrmAlteraBoletim.Height:=183;
+DBGrid_InseriAluno.Enabled:= False;
+If Edit1.Text = '' then
+Begin
+IBQuery_AlteraBoletim.SQL.Clear;
+FrmAlteraBoletim.Height:=102;
+end
+else
+if ComboBox1.Text = 'ALUNO(A)' then
+begin
+Edit1.MaxLength:=49;
+IBQuery_AlteraBoletim.Close;
+IBQuery_AlteraBoletim.SQL.Clear;
+a:='Select MATRICULA, NOME_ALUNO, ANO_LETIVO, CURSO, SERIE, TURNO, TURMA, SEXO, DATA_NASCIMENTO, NOME_PAI, NOME_MAE, NOME_RESP, TEL_RESP, CPF_RESP from ALUNOS ';
+b:='Where ANO_LETIVO = '+#39+AnoLetivo+#39+' and NOME_ALUNO Like:Consulta ';
+c:='Order By NOME_ALUNO';
+IBQuery_AlteraBoletim.SQL.Add(a+b+c);
+IBQuery_AlteraBoletim.Params[0].AsString;
+IBQuery_AlteraBoletim.ParamByName('Consulta').AsString:=Edit1.Text+'%';
+IBQuery_AlteraBoletim.Open;
+end else
+if ComboBox1.Text = 'MATRÍCULA' then
+begin
+Edit1.MaxLength:=22;
+IBQuery_AlteraBoletim.Close;
+IBQuery_AlteraBoletim.SQL.Clear;
+a:='Select MATRICULA, NOME_ALUNO, ANO_LETIVO, CURSO, SERIE, TURNO, TURMA, SEXO, DATA_NASCIMENTO, NOME_PAI, NOME_MAE, NOME_RESP, TEL_RESP, CPF_RESP from ALUNOS ';
+b:='Where ANO_LETIVO = '+#39+AnoLetivo+#39+' and MATRICULA Like:Consulta ';
+c:='Order By NOME_ALUNO';
+IBQuery_AlteraBoletim.SQL.Add(a+b+c);
+IBQuery_AlteraBoletim.Params[0].AsString;
+IBQuery_AlteraBoletim.ParamByName('Consulta').AsString:=Edit1.Text+'%';
+IBQuery_AlteraBoletim.Open;
+end;
+Screen.Cursor := crDefault;
+end;
+
+procedure TFrmAlteraBoletim.BitBtn2Click(Sender: TObject);
+begin
+if Edit1.Text = '' then
+begin
+BitBtn2.Enabled:=False;
+Edit1.SetFocus;
+Exit;
+end
+else
+if (EDICAO = 'ALTERAR') then
+begin
+  ShowMessage('É necessário um boletim aberto pata alterar.');
+  Close;
+  Exit;
+end else
+Dm.IBDS_BOLETIM.Edit;
+Dm.IBDS_MATRICULAS.Close;
+Dm.IBDS_MATRICULAS.Open;
+//ALTERA BOLETIM
+Dm.IBDS_BOLETIM.FieldByName('MATRICULA').asString:= IBQuery_AlteraBoletim.FieldByName('MATRICULA').asString;
+Dm.IBDS_BOLETIM.FieldByName('NOME_ALUNO').asString:= IBQuery_AlteraBoletim.FieldByName('NOME_ALUNO').asString;
+Dm.IBDS_BOLETIM.FieldByName('ANO_LETIVO').asString:= IBQuery_AlteraBoletim.FieldByName('ANO_LETIVO').asString;
+Dm.IBDS_BOLETIM.FieldByName('CURSO').asString:= IBQuery_AlteraBoletim.FieldByName('CURSO').asString;
+Dm.IBDS_BOLETIM.FieldByName('SERIE').asString:= IBQuery_AlteraBoletim.FieldByName('SERIE').asString;
+Dm.IBDS_BOLETIM.FieldByName('TURNO').asString:= IBQuery_AlteraBoletim.FieldByName('TURNO').asString;
+Dm.IBDS_BOLETIM.FieldByName('TURMA').asString:= IBQuery_AlteraBoletim.FieldByName('TURMA').asString;
+Dm.IBDS_BOLETIM.FieldByName('SEXO').asString:= IBQuery_AlteraBoletim.FieldByName('SEXO').asString;
+Dm.IBDS_BOLETIM.FieldByName('DATA_NASCIMENTO').asString:= IBQuery_AlteraBoletim.FieldByName('DATA_NASCIMENTO').asString;
+Dm.IBDS_BOLETIM.FieldByName('NOME_PAI').asString:= IBQuery_AlteraBoletim.FieldByName('NOME_PAI').asString;
+Dm.IBDS_BOLETIM.FieldByName('NOME_MAE').asString:= IBQuery_AlteraBoletim.FieldByName('NOME_MAE').asString;
+Dm.IBDS_BOLETIM.FieldByName('NOME_RESP').asString:= IBQuery_AlteraBoletim.FieldByName('NOME_RESP').asString;
+Dm.IBDS_BOLETIM.FieldByName('TEL_RESP').asString:= IBQuery_AlteraBoletim.FieldByName('TEL_RESP').asString;
+Dm.IBDS_BOLETIM.FieldByName('CPF_RESP').asString:= IBQuery_AlteraBoletim.FieldByName('CPF_RESP').asString;
+// ALTERA MATRICULAS
+Dm.IBDS_MATRICULAS.Locate('MATRICULA',IBQuery_AlteraBoletim.FieldByName('MATRICULA').asString,[]);
+Dm.IBDS_MATRICULAS.Edit;
+Dm.IBDS_MATRICULAS.FieldByName('MATRICULA').asString:= IBQuery_AlteraBoletim.FieldByName('MATRICULA').asString;
+Dm.IBDS_MATRICULAS.FieldByName('NOME_ALUNO').asString:= IBQuery_AlteraBoletim.FieldByName('NOME_ALUNO').asString;
+Dm.IBDS_MATRICULAS.FieldByName('ANO_LETIVO').asString:= IBQuery_AlteraBoletim.FieldByName('ANO_LETIVO').asString;
+Dm.IBDS_MATRICULAS.FieldByName('CURSO').asString:= IBQuery_AlteraBoletim.FieldByName('CURSO').asString;
+Dm.IBDS_MATRICULAS.FieldByName('SERIE').asString:= IBQuery_AlteraBoletim.FieldByName('SERIE').asString;
+Dm.IBDS_MATRICULAS.FieldByName('TURNO').asString:= IBQuery_AlteraBoletim.FieldByName('TURNO').asString;
+Dm.IBDS_MATRICULAS.FieldByName('TURMA').asString:= IBQuery_AlteraBoletim.FieldByName('TURMA').asString;
+Dm.IBDS_MATRICULAS.FieldByName('SEXO').asString:= IBQuery_AlteraBoletim.FieldByName('SEXO').asString;
+Dm.IBDS_MATRICULAS.FieldByName('DATA_NASCIMENTO').asString:= IBQuery_AlteraBoletim.FieldByName('DATA_NASCIMENTO').asString;
+Dm.IBDS_MATRICULAS.FieldByName('NOME_PAI').asString:= IBQuery_AlteraBoletim.FieldByName('NOME_PAI').asString;
+Dm.IBDS_MATRICULAS.FieldByName('NOME_MAE').asString:= IBQuery_AlteraBoletim.FieldByName('NOME_MAE').asString;
+Dm.IBDS_MATRICULAS.FieldByName('NOME_RESP').asString:= IBQuery_AlteraBoletim.FieldByName('NOME_RESP').asString;
+Dm.IBDS_MATRICULAS.FieldByName('TEL_RESP').asString:= IBQuery_AlteraBoletim.FieldByName('TEL_RESP').asString;
+Dm.IBDS_MATRICULAS.FieldByName('CPF_RESP').asString:= IBQuery_AlteraBoletim.FieldByName('CPF_RESP').asString;
+Close;
+FrmBoletim.SbSalvar.SetFocus;
+FrmBoletim.SbSalvar.OnClick(Nil);
+if Dm.DS_MATRICULAS.State = dsEdit then
+begin
+If Not(Dm.IBTransaction.InTransaction) Then
+Dm.IBTransaction.StartTransaction;
+Dm.IBDS_MATRICULAS.Post;
+Dm.IBDS_MATRICULAS.ApplyUpdates;
+Dm.IBTransaction.CommitRetaining;
+end;
+end;
+
+procedure TFrmAlteraBoletim.DataSource1StateChange(Sender: TObject);
+begin
+BitBtn2.Enabled:= DataSource1.State in [dsBrowse];
+end;
+
+procedure TFrmAlteraBoletim.ComboBox1Change(Sender: TObject);
+begin
+if ComboBox1.Text = 'SÉRIE' then
+begin
+Label1.Caption:= 'Informe o(a) '+ComboBox1.Text;
+Label2.Visible:= True;
+Label3.Visible:= True;
+CBox_Serie.Visible:= True;
+CBox_Turma.Visible:= True;
+CBox_Turno.Visible:= True;
+Edit1.Visible:= False;
+BitBtn2.Enabled:=False;
+CBox_Serie.SetFocus;
+Exit;
+end else
+Label1.Caption:= 'Informe o(a) '+ComboBox1.Text;
+Label2.Visible:= False;
+Label3.Visible:= False;
+CBox_Serie.Visible:= False;
+CBox_Turma.Visible:= False;
+CBox_Turno.Visible:= False;
+Edit1.Visible:= True;
+Edit1.Text:='';
+Edit1.SetFocus;
+end;
+
+procedure TFrmAlteraBoletim.ComboBox1KeyPress(Sender: TObject;
+  var Key: Char);
+begin
+  if Key = #13 then
+  begin
+  Key := #0;{ Suprime o som }
+  { escreva aqui os seus comandos }
+ if ComboBox1.Text = 'SÉRIE' then
+begin
+CBox_Serie.SetFocus;
+Exit;
+end else
+Edit1.SetFocus;
+  end;
+end;
+
+procedure TFrmAlteraBoletim.ComboBox1Enter(Sender: TObject);
+begin
+if ComboBox1.Text = '' then
+begin
+ComboBox1.ItemIndex:= 0;
+end;
+end;
+
+procedure TFrmAlteraBoletim.DBGrid_InseriAlunoKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #13 then
+  begin
+  Key := #0;{ Suprime o som }
+  { escreva aqui os seus comandos }
+
+Exit;
+end else
+if DBGrid_InseriAluno.Fields[0].Text <> '' then
+begin
+BitBtn2Click(Nil);
+Exit;
+end else
+Edit1.SetFocus;
+end;
+
+procedure TFrmAlteraBoletim.Edit1KeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+var
+  theText: string;
+  p: integer;
+begin
+  with Edit1 do
+    case key of
+      8, 13, 46, 37..40: ; // Se for backspace, enter, delete, ou setas, ignora...
+      else
+      begin
+        p := SelStart;
+        theText := copy(text, 0, p);
+        if IBQuery_AlteraBoletim.Locate('NOME_ALUNO', theText, [loCaseInsensitive, loPartialKey]) then
+        begin
+          text := IBQuery_AlteraBoletim.FieldByName('NOME_ALUNO').AsString;
+          SelStart := p;
+          SelLength := length(text) - selStart;
+       end;
+   end;
+  end;
+end;
+
+procedure TFrmAlteraBoletim.Edit1KeyPress(Sender: TObject; var Key: Char);
+begin
+if ComboBox1.Text = 'MATRÍCULA' then
+begin
+If not( key in['0'..'9','-',#8,#13] ) then
+begin
+key:=#0;
+end;
+end;
+ if Key = #13 then
+  begin
+  Key := #0;{ Suprime o som }
+  { escreva aqui os seus comandos }
+if BitBtn2.Enabled = False then
+begin
+Edit1.SetFocus;
+Exit;
+end else
+if ComboBox1.Text = 'MATRÍCULA' then
+begin
+Edit1.Text:= FrmPrincipal.RetZero(Edit1.Text, 15);
+Edit1.Text:= FrmLocalizar.FormataMat(Edit1.Text);
+end else
+if IBQuery_AlteraBoletim.FieldByName('NOME_ALUNO').AsString <> '' then
+begin
+BitBtn2Click(Nil);
+Exit;
+end else
+Edit1.SetFocus;
+end;
+end;
+
+procedure TFrmAlteraBoletim.FormShow(Sender: TObject);
+begin
+FrmAlteraBoletim.Top:=0;
+FrmAlteraBoletim.Left:=0;
+if Dm.IBDS_EMPRESANOME_EMPRESARIAL.AsString = '' then
+begin
+FrmAlteraBoletim.Caption:= FrmAlteraBoletim.Caption;
+Exit;
+end else
+FrmAlteraBoletim.Caption:= FrmAlteraBoletim.Caption+' - '+Dm.IBDS_EMPRESANOME_FANTASIA.AsString;
+end;
+
+procedure TFrmAlteraBoletim.CBox_TurnoKeyPress(Sender: TObject;
+  var Key: Char);
+begin
+ if Key = #13 then
+  begin
+  Key := #0;{ Suprime o som }
+  { escreva aqui os seus comandos }
+Screen.Cursor := crHourGlass;
+ IBQuery_AlteraBoletim.Close;
+ IBQuery_AlteraBoletim.SQL.Clear;
+ IBQuery_AlteraBoletim.SQL.Add('select  MATRICULA, NOME_ALUNO, ANO_LETIVO, CURSO, SERIE, TURNO, TURMA, SEXO, DATA_NASCIMENTO, NOME_PAI, NOME_MAE, NOME_RESP, TEL_RESP, CPF_RESP from MATRICUL ');
+ IBQuery_AlteraBoletim.SQL.Add('where SERIE = :SerieAluno and TURMA = :TurmaAluno and TURNO = :TurnoAluno and ANO_LETIVO = :AnoLet ');
+ IBQuery_AlteraBoletim.ParamByName('SerieAluno').AsString:= CBox_Serie.Text;
+ IBQuery_AlteraBoletim.ParamByName('TurmaAluno').AsString:= CBox_Turma.Text;
+ IBQuery_AlteraBoletim.ParamByName('TurnoAluno').AsString:= CBox_Turno.Text;
+ IBQuery_AlteraBoletim.ParamByName('AnoLet').AsString:= AnoLetivo;
+ IBQuery_AlteraBoletim.SQL.Add('order by NOME_ALUNO');
+ IBQuery_AlteraBoletim.Prepare;
+ IBQuery_AlteraBoletim.Open;
+Screen.Cursor := crDefault;
+FrmAlteraBoletim.Height:=183;
+If IBQuery_AlteraBoletim.FieldByName('NOME_ALUNO').AsString = '' then
+Begin
+IBQuery_AlteraBoletim.SQL.Clear;
+FrmAlteraBoletim.Height:=102;
+DBGrid_InseriAluno.Enabled:= True;
+Exit;
+end else
+DBGrid_InseriAluno.SetFocus;
+  end;
+end;
+
+procedure TFrmAlteraBoletim.FormCreate(Sender: TObject);
+begin
+if (EDICAO = 'ALTERAR') then
+begin
+     ComboBox1.Clear;
+     ComboBox1.Items.Add('MATRÍCULA');
+     ComboBox1.Items.Add('ALUNO(A)');
+     Label1.Caption:= 'Informe o(a) '+ComboBox1.Text;
+Label2.Visible:= False;
+Label3.Visible:= False;
+CBox_Serie.Visible:= False;
+CBox_Turma.Visible:= False;
+CBox_Turno.Visible:= False;
+Edit1.Visible:= True;
+Edit1.Text:='';
+ComboBox1.ItemIndex:= 1;
+Exit;
+end else
+ComboBox1.ItemIndex:= 2;
+end;
+
+procedure TFrmAlteraBoletim.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if (Key = #13) and not (ActiveControl is TMemo) then begin
+// desabilita processamento posterior da tecla
+  Key := #0;
+  Perform(WM_NEXTDLGCTL,0,0);
+  end;
+end;
+
+procedure TFrmAlteraBoletim.CBox_SerieKeyPress(Sender: TObject;
+  var Key: Char);
+begin
+  if Key = #13 then
+  begin
+  Key := #0;{ Suprime o som }
+  { escreva aqui os seus comandos }
+  CBox_Turma.SetFocus;
+  end;
+end;
+
+procedure TFrmAlteraBoletim.CBox_TurmaKeyPress(Sender: TObject;
+  var Key: Char);
+begin
+  if Key = #13 then
+  begin
+  Key := #0;{ Suprime o som }
+  { escreva aqui os seus comandos }
+  CBox_Turno.SetFocus;
+  end;
+end;
+
+procedure TFrmAlteraBoletim.FormCloseQuery(Sender: TObject;
+  var CanClose: Boolean);
+begin
+Dm.IBDS_BOLETIM.First;
+FrmBoletim.Edit1.Items.Clear;
+ if not Dm.IBDS_BOLETIM.Eof then
+ repeat
+ { seus comandos para a tabela }
+FrmBoletim.Edit1.Items.Add(Dm.IBDS_BOLETIMNOME_ALUNO.AsString);
+ Dm.IBDS_BOLETIM.Next;
+ until Dm.IBDS_BOLETIM.Eof;
+Dm.IBDS_BOLETIM.First; 
+end;
+
+end.

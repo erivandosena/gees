@@ -1,0 +1,239 @@
+unit UnBD;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, Buttons, Registry, WinSock, IdTCPClient, IniFiles;
+
+type
+  TFrmBD = class(TForm)
+    Edit_Caminho: TEdit;
+    Btn_Local: TBitBtn;
+    BitBtn2: TBitBtn;
+    OpenDialog1: TOpenDialog;
+    GroupBox1: TGroupBox;
+    RB_Local: TRadioButton;
+    RB_Servidor: TRadioButton;
+    RB_Cliente: TRadioButton;
+    Label_IP: TLabel;
+    Edit_NomeServidor: TEdit;
+    Edit_Cliente: TComboBox;
+    Label2: TLabel;
+    procedure Edit_ClienteChange(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure RB_ClienteClick(Sender: TObject);
+    procedure RB_ServidorClick(Sender: TObject);
+    procedure RB_LocalClick(Sender: TObject);
+    procedure Btn_LocalClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure BitBtn2Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+    const
+  my_key = 21327;//33189;
+
+var
+  FrmBD: TFrmBD;
+  i, iOK: Integer;
+  Arquivo, NomePC, IPservidor, NomeServidor,
+  DirServidor, Caminho: String;
+  ArquivoINI: TIniFile;
+
+implementation
+
+uses UnDm, NetAPI;
+
+{$R *.dfm}
+
+function ServerIsRunning(
+  AHost: string; APort: integer): boolean;
+begin
+ { declare IdTCPClient no uses }
+ with TIdTCPClient.Create(nil) do
+ begin
+   Host := AHost;
+   Port := APort;
+   Result := True;
+   try
+     Connect;
+     Disconnect;
+   except
+     Result := False;
+   end;
+   Free;
+ end;
+end;
+
+procedure TFrmBD.Btn_LocalClick(Sender: TObject);
+begin
+OpenDialog1.InitialDir:= ExtractFilePath(Application.ExeName);
+  With OpenDialog1 do if Execute
+   then
+   for i := 0 to Files.Count-1
+        do Edit_Caminho.Text:=(Files[i]);
+Arquivo:= AnsiUpperCase(ExtractFileName(Edit_Caminho.Text));
+Label1.Caption:= 'Local do arquivo: '+Arquivo;
+LocalBanco:= Edit_Caminho.Text;
+Close;
+end;
+
+procedure TFrmBD.BitBtn2Click(Sender: TObject);
+var
+Banco, NomeLocal: String;
+begin
+if RB_Local.Checked = True then
+begin
+//Dir:= 'C:\Arquivos de programas\INFORAMOS\GEES\Local';
+//if not DirectoryExists(Dir) then
+//ForceDirectories(Dir);
+Caminho:= Edit_Caminho.Text;
+end else
+if RB_Servidor.Checked = True then
+begin
+  ArquivoINI := TIniFile.Create(ExtractFilePath(ParamStr(0)) + Edit_NomeServidor.Text+'.ini');
+Try
+  ArquivoINI.WriteString(Edit_NomeServidor.Text,'LOCAL',LocalBanco);
+Finally
+ArquivoINI.Free;
+end;
+Caminho:= Edit_Caminho.Text;
+end else
+if RB_Cliente.Checked = True then
+begin
+  ArquivoINI := TIniFile.Create(ExtractFilePath(ParamStr(0)) + Edit_Cliente.Text+'.ini');
+Try
+//NomeLocal:= ArquivoINI.ReadString(Edit_Cliente.Text,'LOCAL',NomeLocal);
+Caminho:=  ArquivoINI.ReadString(Edit_Cliente.Text,'LOCAL',NomeLocal);
+Label1.Caption:= ArquivoINI.ReadString(Edit_Cliente.Text,'LOCAL',NomeLocal);
+Finally
+ArquivoINI.Free;
+end;
+end;
+
+
+Reg:=TRegistry.Create;
+Reg.CreateKey('GEES\Bd');
+If Reg.OpenKey('GEES\Bd', True) then
+begin
+Reg.WriteString('Local', Caminho);
+Reg.CloseKey;
+end;
+Arquivo:= ExtractFileName(Caminho);
+if not (Arquivo = AnsiUpperCase(Application.Title)+'.IB') or (Arquivo = AnsiUpperCase(Application.Title)+'.GDB') then
+begin
+ShowMessage('Caminho informado com arquivo inválido.');
+Reg.DeleteKey('GEES\Bd');
+Application.Terminate;
+Exit;
+end else
+iOK := 625;
+Close;
+end;
+
+procedure TFrmBD.Edit_ClienteChange(Sender: TObject);
+begin
+NomeServidor:=  Edit_Cliente.Text;
+end;
+
+procedure TFrmBD.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+if iOK <> 625 then
+Canclose := False;
+end;
+
+procedure TFrmBD.FormCreate(Sender: TObject);
+var
+wVersionRequested: WORD;
+wsaData: TWSAData;
+begin
+wVersionRequested:= MAKEWORD(1, 1);
+WSAStartup(wVersionRequested, wsaData);
+end;
+
+procedure TFrmBD.FormDestroy(Sender: TObject);
+begin
+WSACleanup;
+end;
+
+procedure TFrmBD.RB_ClienteClick(Sender: TObject);
+begin
+Reg:=TRegistry.Create;
+Reg.CreateKey('GEES\Gerenciamento de rede');
+If Reg.OpenKey('GEES\Gerenciamento de rede', True) then
+begin
+Reg.WriteString('Tipo', 'Cliente');
+Reg.CloseKey;
+end;
+Edit_Caminho.Visible:= False;
+Btn_Local.Visible:= False;
+Edit_NomeServidor.Visible:= False;
+Label_IP.Visible:= False;
+Edit_Cliente.Visible:= True;
+Label_IP.Visible:= False;
+Label2.Visible:= True;
+Screen.Cursor := crHourglass;
+  GetServerNames(Edit_Cliente.Items,'',SV_TYPE_ALL);
+//  for i := 0 to pred(Edit_Cliente.Items.Count) do
+ //   if ServerIsRunning(Edit_Cliente.Items[i],3050) then
+   //   ListBox2.Items.Add(ListBox1.Items[i]);
+Screen.Cursor := crDefault;
+end;
+
+procedure TFrmBD.RB_LocalClick(Sender: TObject);
+begin
+Reg:=TRegistry.Create;
+Reg.CreateKey('GEES\Gerenciamento de rede');
+If Reg.OpenKey('GEES\Gerenciamento de rede', True) then
+begin
+Reg.WriteString('Tipo', 'Local');
+Reg.CloseKey;
+end;
+Edit_Caminho.Visible:= True;
+Btn_Local.Visible:= True;
+Edit_NomeServidor.Visible:= False;
+Edit_Cliente.Visible:= False;
+Label_IP.Visible:= False;
+Label2.Visible:= False;
+end;
+
+procedure TFrmBD.RB_ServidorClick(Sender: TObject);
+var
+Host : PHostEnt;
+S : array[0..128] of char;
+Num_Ip : pchar;
+Msg: String;
+begin
+Reg:=TRegistry.Create;
+Reg.CreateKey('GEES\Gerenciamento de rede');
+If Reg.OpenKey('GEES\Gerenciamento de rede', True) then
+begin
+Reg.WriteString('Tipo', 'Servidor');
+Reg.CloseKey;
+end;
+Edit_Caminho.Visible:= False;
+Btn_Local.Visible:= False;
+Edit_NomeServidor.Visible:= True;
+Label_IP.Visible:= True;
+Edit_Cliente.Visible:= False;
+Label2.Visible:= False;
+// Pega o nome da maquina
+GetHostName(@s, 128);
+Host:= GetHostByName(@s);
+// Pega o número do IP da maquina
+Num_Ip:= iNet_ntoa(PInAddr(Host^.h_addr_list^)^);
+// Junta o nome da maquina + o número Ip
+//Msg:= 'Nome do Host: ' + Host^.h_Name + #13 + 'Número IP: ' + Num_Ip;
+  Edit_NomeServidor.Text:= AnsiUpperCase(Host^.h_Name);
+//  Edit_IPServer.Text:= Num_Ip;
+  NomePC:= Edit_NomeServidor.Text;
+  //IPservidor:= Edit_IPServer.Text;
+  Label_IP.Caption:= 'IP: '+Num_Ip;
+end;
+
+end.

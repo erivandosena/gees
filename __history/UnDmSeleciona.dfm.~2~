@@ -1,0 +1,70 @@
+object DmSeleciona: TDmSeleciona
+  OldCreateOrder = False
+  Height = 150
+  Width = 215
+  object IBQ_AnoLetivo: TIBQuery
+    Database = Dm.IBDatabase
+    Transaction = Dm.IBTransaction
+    ForcedRefresh = True
+    CachedUpdates = True
+    SQL.Strings = (
+      'select ANO_LETIVO, CURSO, SERIE, TURMA, TURNO from MATRICUL')
+    Left = 40
+    Top = 24
+    object IBQ_AnoLetivoANO_LETIVO: TIBStringField
+      FieldName = 'ANO_LETIVO'
+      Origin = '"MATRICUL"."ANO_LETIVO"'
+      Size = 4
+    end
+    object IBQ_AnoLetivoCURSO: TIBStringField
+      FieldName = 'CURSO'
+      Origin = '"MATRICUL"."CURSO"'
+      Size = 21
+    end
+    object IBQ_AnoLetivoSERIE: TIBStringField
+      FieldName = 'SERIE'
+      Origin = '"MATRICUL"."SERIE"'
+      Size = 30
+    end
+    object IBQ_AnoLetivoTURMA: TIBStringField
+      FieldName = 'TURMA'
+      Origin = '"MATRICUL"."TURMA"'
+      Size = 10
+    end
+    object IBQ_AnoLetivoTURNO: TIBStringField
+      FieldName = 'TURNO'
+      Origin = '"MATRICUL"."TURNO"'
+      Size = 5
+    end
+  end
+  object Ds_AnoLetivo: TDataSource
+    DataSet = IBQ_AnoLetivo
+    Left = 40
+    Top = 80
+  end
+  object IB_Disciplinas: TIBQuery
+    Database = Dm.IBDatabase
+    Transaction = Dm.IBTransaction
+    ForcedRefresh = True
+    CachedUpdates = True
+    SQL.Strings = (
+      'select DISCIPLINA, LDB from MATERIAS')
+    Left = 136
+    Top = 24
+    object IB_DisciplinasDISCIPLINA: TIBStringField
+      FieldName = 'DISCIPLINA'
+      Origin = '"MATERIAS"."DISCIPLINA"'
+      Size = 30
+    end
+    object IB_DisciplinasLDB: TIBStringField
+      FieldName = 'LDB'
+      Origin = '"MATERIAS"."LDB"'
+      Size = 2
+    end
+  end
+  object Ds_Disciplinas: TDataSource
+    DataSet = IB_Disciplinas
+    Left = 136
+    Top = 80
+  end
+end

@@ -1,0 +1,23 @@
+unit UnDmSeleciona;
+
+interface
+
+uses
+  SysUtils, Classes;
+
+type
+  TDmSeleciona = class(TDataModule)
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  DmSeleciona: TDmSeleciona;
+
+implementation
+
+{$R *.dfm}
+
+end.

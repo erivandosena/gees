@@ -1,0 +1,23 @@
+unit UnDmACSTTD;
+
+interface
+
+uses
+  SysUtils, Classes;
+
+type
+  TDmACSTTD = class(TDataModule)
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  DmACSTTD: TDmACSTTD;
+
+implementation
+
+{$R *.dfm}
+
+end.

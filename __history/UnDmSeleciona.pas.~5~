@@ -1,0 +1,29 @@
+unit UnDmSeleciona;
+
+interface
+
+uses
+  SysUtils, Classes, UnDm, DB, IBCustomDataSet, IBQuery;
+
+type
+  TDmSeleciona = class(TDataModule)
+    IBQ_AnoLetivo: TIBQuery;
+    Ds_AnoLetivo: TDataSource;
+    IB_Disciplinas: TIBQuery;
+    Ds_Disciplinas: TDataSource;
+    IB_DisciplinasDISCIPLINA: TIBStringField;
+    IB_DisciplinasLDB: TIBStringField;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  DmSeleciona: TDmSeleciona;
+
+implementation
+
+{$R *.dfm}
+
+end.

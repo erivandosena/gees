@@ -1,0 +1,347 @@
+unit UnBD;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, Buttons, Registry, WinSock, IdTCPClient, IniFiles;
+
+type
+  TFrmBD = class(TForm)
+    BitBtn2: TBitBtn;
+    OpenDialog1: TOpenDialog;
+    GroupBox1: TGroupBox;
+    RB_Local: TRadioButton;
+    RB_Servidor: TRadioButton;
+    RB_Cliente: TRadioButton;
+    Label_IP: TLabel;
+    Edit_NomeServidor: TEdit;
+    Edit_Cliente: TComboBox;
+    Label2: TLabel;
+    Edit_Caminho: TEdit;
+    Btn_Local: TBitBtn;
+    procedure Edit_ClienteChange(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure RB_ClienteClick(Sender: TObject);
+    procedure RB_ServidorClick(Sender: TObject);
+    procedure RB_LocalClick(Sender: TObject);
+    procedure Btn_LocalClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure BitBtn2Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+    Function RecurseDirectory(fname:string):tstringlist;
+  end;
+
+type
+PRecInfo=^TRecInfo;
+Trecinfo=record
+prev:PRecInfo;
+fpathname:string;
+srchrec: Tsearchrec;
+end;
+
+    const
+  my_key = 21327;//33189;
+
+var
+  FrmBD: TFrmBD;
+  i, iOK: Integer;
+  Arquivo, NomePC, IPservidor, NomeServidor,
+  Caminho, LocalINI: String;
+  ArquivoINI: TIniFile;
+  l1:Tstringlist;
+
+implementation
+
+uses UnDm, NetAPI;
+
+{$R *.dfm}
+
+function ServerIsRunning(
+  AHost: string; APort: integer): boolean;
+begin
+ { declare IdTCPClient no uses }
+ with TIdTCPClient.Create(nil) do
+ begin
+   Host := AHost;
+   Port := APort;
+   Result := True;
+   try
+     Connect;
+     Disconnect;
+   except
+     Result := False;
+   end;
+   Free;
+ end;
+end;
+
+procedure TFrmBD.Btn_LocalClick(Sender: TObject);
+begin
+OpenDialog1.InitialDir:= ExtractFilePath(Application.ExeName);
+  With OpenDialog1 do if Execute
+   then
+   for i := 0 to Files.Count-1
+        do Edit_Caminho.Text:=(Files[i]);
+Arquivo:= AnsiUpperCase(ExtractFileName(Edit_Caminho.Text));
+LocalBanco:= Edit_Caminho.Text;
+Close;
+end;
+
+procedure TFrmBD.BitBtn2Click(Sender: TObject);
+begin
+if RB_Local.Checked = True then
+begin
+//Dir:= 'C:\Arquivos de programas\INFORAMOS\GEES\Local';
+//if not DirectoryExists(Dir) then
+//ForceDirectories(Dir);
+Caminho:= LocalBanco;
+end else
+if RB_Servidor.Checked = True then
+begin
+  ArquivoINI := TIniFile.Create(ExtractFilePath(ParamStr(0)) + Edit_NomeServidor.Text+'.ini');
+Try
+  ArquivoINI.WriteString(Edit_NomeServidor.Text,'LOCAL',LocalBanco);
+Finally
+ArquivoINI.Free;
+end;
+Caminho:= LocalBanco;
+end else
+if RB_Cliente.Checked = True then
+begin
+(*Screen.Cursor := crHourglass;
+l1:=tstringlist.create;
+l1:= RecurseDirectory('\\'+Edit_Cliente.Text+'\C\'+Edit_Cliente.Text+'.ini');
+LocalINI:= l1.Text;
+Label2.Caption:= LocalINI;
+Screen.Cursor := crDefault;  *)
+  ArquivoINI := TIniFile.Create(ExtractFilePath(ParamStr(0)) + Edit_Cliente.Text+'.ini');
+Try
+Caminho:=  ArquivoINI.ReadString(Edit_Cliente.Text,'LOCAL',LocalBanco);
+Finally
+ArquivoINI.Free;
+end;
+end;
+Reg:=TRegistry.Create;
+Reg.CreateKey('GEES\Bd');
+If Reg.OpenKey('GEES\Bd', True) then
+begin
+if RB_Cliente.Checked = True then
+begin
+Reg.WriteString('Local', NomeServidor+':'+Caminho);
+end else
+Reg.WriteString('Local', Caminho);
+Reg.CloseKey;
+end;
+Arquivo:= ExtractFileName(Caminho);
+if not (Arquivo = AnsiUpperCase(Application.Title)+'.IB') or (Arquivo = AnsiUpperCase(Application.Title)+'.GDB') then
+begin
+ShowMessage('Caminho informado com arquivo inválido.');
+Reg.DeleteKey('GEES\Bd');
+Application.Terminate;
+Exit;
+end else
+iOK := 625;
+Close;
+end;
+
+procedure TFrmBD.Edit_ClienteChange(Sender: TObject);
+begin
+NomeServidor:=  Edit_Cliente.Text;
+end;
+
+procedure TFrmBD.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+if iOK <> 625 then
+Canclose := False;
+end;
+
+procedure TFrmBD.FormCreate(Sender: TObject);
+var
+wVersionRequested: WORD;
+wsaData: TWSAData;
+begin
+wVersionRequested:= MAKEWORD(1, 1);
+WSAStartup(wVersionRequested, wsaData);
+end;
+
+procedure TFrmBD.FormDestroy(Sender: TObject);
+begin
+WSACleanup;
+end;
+
+procedure TFrmBD.RB_ClienteClick(Sender: TObject);
+begin
+Reg:=TRegistry.Create;
+Reg.CreateKey('GEES\Gerenciamento de rede');
+If Reg.OpenKey('GEES\Gerenciamento de rede', True) then
+begin
+Reg.WriteString('Tipo', 'Cliente');
+Reg.CloseKey;
+end;
+Edit_Caminho.Visible:= False;
+Btn_Local.Visible:= False;
+Edit_NomeServidor.Visible:= False;
+Label_IP.Visible:= False;
+Edit_Cliente.Visible:= True;
+Label_IP.Visible:= False;
+Label2.Visible:= True;
+Screen.Cursor := crHourglass;
+  GetServerNames(Edit_Cliente.Items,'',SV_TYPE_ALL);
+//  for i := 0 to pred(Edit_Cliente.Items.Count) do
+ //   if ServerIsRunning(Edit_Cliente.Items[i],3050) then
+   //   ListBox2.Items.Add(ListBox1.Items[i]);
+Screen.Cursor := crDefault;
+end;
+
+procedure TFrmBD.RB_LocalClick(Sender: TObject);
+begin
+Reg:=TRegistry.Create;
+Reg.CreateKey('GEES\Gerenciamento de rede');
+If Reg.OpenKey('GEES\Gerenciamento de rede', True) then
+begin
+Reg.WriteString('Tipo', 'Local');
+Reg.CloseKey;
+end;
+Edit_Caminho.Visible:= True;
+Btn_Local.Visible:= True;
+Edit_NomeServidor.Visible:= False;
+Edit_Cliente.Visible:= False;
+Label_IP.Visible:= False;
+Label2.Visible:= False;
+end;
+
+procedure TFrmBD.RB_ServidorClick(Sender: TObject);
+var
+Host : PHostEnt;
+S : array[0..128] of char;
+Num_Ip : pchar;
+begin
+Reg:=TRegistry.Create;
+Reg.CreateKey('GEES\Gerenciamento de rede');
+If Reg.OpenKey('GEES\Gerenciamento de rede', True) then
+begin
+Reg.WriteString('Tipo', 'Servidor');
+Reg.CloseKey;
+end;
+Edit_Caminho.Visible:= False;
+Btn_Local.Visible:= False;
+Edit_NomeServidor.Visible:= True;
+Label_IP.Visible:= True;
+Edit_Cliente.Visible:= False;
+Label2.Visible:= False;
+// Pega o nome da maquina
+GetHostName(@s, 128);
+Host:= GetHostByName(@s);
+// Pega o número do IP da maquina
+Num_Ip:= iNet_ntoa(PInAddr(Host^.h_addr_list^)^);
+// Junta o nome da maquina + o número Ip
+//Msg:= 'Nome do Host: ' + Host^.h_Name + #13 + 'Número IP: ' + Num_Ip;
+  Edit_NomeServidor.Text:= AnsiUpperCase(Host^.h_Name);
+//  Edit_IPServer.Text:= Num_Ip;
+  NomePC:= Edit_NomeServidor.Text;
+  //IPservidor:= Edit_IPServer.Text;
+  Label_IP.Caption:= 'IP: '+Num_Ip;
+end;
+
+function TFrmBD.RecurseDirectory(fname: string): tstringlist;
+var 
+f1,f2:Tsearchrec; 
+p1,tmp:PRecInfo; 
+fwc:string; 
+fpath:string; 
+fbroke1,fbroke2:boolean; 
+begin 
+result:=tstringlist.create; 
+fpath:=extractfilepath(fname); 
+fwc:=extractfilename(fname); 
+new(p1); 
+p1.fpathname:=fpath; 
+p1.prev:=nil; 
+fbroke1:=false;
+fbroke2:=false; 
+while(p1<>nil) do 
+begin 
+if (fbroke1=false) then 
+if (fbroke2=false) then 
+begin 
+if (findfirst(fpath+'*',faAnyfile,f1)<>0) then 
+break; 
+end 
+else if (findnext(f1)<>0) then 
+begin 
+repeat 
+findclose(f1); 
+if (p1=nil) then 
+break; 
+fpath:=p1.fpathname; 
+f1:=p1.srchrec; 
+tmp:=p1.prev; 
+dispose(p1); 
+p1:=tmp; 
+until (findnext(f1)=0); 
+if (p1=nil) then 
+break; 
+end; 
+if((f1.Name<>'.') and (f1.name<>'..') and ((f1.Attr and fadirectory)=fadirectory)) then 
+begin 
+fbroke1:=false; 
+new(tmp); 
+with tmp^ do 
+begin 
+fpathname:=fpath; 
+srchrec.Time:=f1.time; 
+srchrec.Size:=f1.size; 
+srchrec.Attr:=f1.attr; 
+srchrec.Name:=f1.name; 
+srchrec.ExcludeAttr:=f1.excludeattr; 
+srchrec.FindHandle:=f1.findhandle; 
+srchrec.FindData:=f1.FindData; 
+end; 
+tmp.prev:=p1; 
+p1:=tmp; 
+fpath:=p1.fpathname+f1.name+'\'; 
+if findfirst(fpath+fwc,faAnyfile,f2)=0 then 
+begin 
+result.add(fpath+f2.Name); 
+while(findnext(f2)=0) do 
+result.add(fpath+f2.Name); 
+findclose(f2); 
+end; 
+fbroke2:=false; 
+end 
+else 
+begin 
+if (findnext(f1)<>0) then 
+begin 
+findclose(f1); 
+fpath:=p1.fpathname; 
+f1:=p1.srchrec; 
+fbroke1:=false; 
+fbroke2:=true; 
+tmp:=p1.prev; 
+dispose(p1); 
+p1:=tmp; 
+end 
+else 
+begin 
+fbroke1:=true; 
+fbroke2:=false; 
+end; 
+end; 
+end; 
+fpath:=extractfilepath(fname); 
+if findfirst(fname,faAnyfile,f1)=0 then 
+begin 
+result.add(fpath+f2.Name); 
+while(findnext(f1)=0) do 
+result.add(fpath+f2.Name); 
+findclose(f1); 
+end;
+end;
+
+end.
